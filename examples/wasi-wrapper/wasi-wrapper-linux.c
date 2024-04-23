@@ -66,13 +66,20 @@ WasiError fd_close(int fd) {
 
 WasiError fd_read(int fd, int buf_iovec_addr, int vec_len, int size_addr) {
     printf("[host] fd_read fd=%d vec_len=%d size_addr=%d\n", fd, vec_len, size_addr);
+    if (vec_len != 1) return 29;  // IO
+    IoVec* iovec = (IoVec*)(linear_memory_base + buf_iovec_addr);
+    char* buf_ptr = (char *)(linear_memory_base + iovec[0].iov_base);
+    size_t buf_len = iovec[0].iov_len;
+    printf("[host] fd_read buf_len=%d\n", buf_len);
+    for (int i = 0; i < buf_len - 1; ++i) buf_ptr[i] = 'A' + (i % 16);
+    int* size_ptr = (int *)(linear_memory_base + size_addr);
+    *size_ptr = buf_len - 1;
     return SUCCESS;
 }
 
 WasiError fd_write(int fd, int buf_iovec_addr, int vec_len, int size_addr) {
     printf("[host] fd_write fd=%d vec_len=%d size_addr=%d\n", fd, vec_len, size_addr);
-    char* iovec_ptr = (char *)(linear_memory_base + buf_iovec_addr);
-    IoVec* iovec = (IoVec*)iovec_ptr;
+    IoVec* iovec = (IoVec*)(linear_memory_base + buf_iovec_addr);
 
     int len = 0;
     for (int i = 0; i < vec_len; i++){
