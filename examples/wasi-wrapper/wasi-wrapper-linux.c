@@ -22,12 +22,55 @@ typedef struct {
   int iov_len;
 } IoVec;
 
+typedef struct {
+  char tag;
+  int len;
+} Prestat;
+
 typedef enum {
     SUCCESS,
     // Add other error types here
 } WasiError;
 
+WasiError path_open(int fd, int dirflags, int path_addr, int path_length, int oflags, long long rights_base, long long rights_inferiting, int fdflags, int opened_fd_addr) {
+    printf("[host] path_open fd=%d opened_fd_addr=%d\n", fd, opened_fd_addr);
+    int* p = (int*)(linear_memory_base + opened_fd_addr);
+    *p = 4;
+    return SUCCESS;
+}
+
+WasiError fd_filestat_get(int fd) {
+    printf("[host] fd_filestat_get fd=%d\n", fd);
+}
+
+WasiError fd_prestat_get(int fd, int addr) {
+    printf("[host] fd_prestat_get fd=%d addr=%d\n", fd, addr);
+    if (fd != 3) return 8;  // BADF
+    Prestat* p = (Prestat*)(linear_memory_base + addr);
+    p->tag = 0;
+    p->len = 1;
+    return SUCCESS;
+}
+
+WasiError fd_prestat_dir_name(int fd, int addr, int len) {
+    printf("[host] fd_prestat_dir_name fd=%d addr=%d len=%d\n", fd, addr, len);
+    char* p = (char*)(linear_memory_base + addr);
+    *p = 'a';
+    return SUCCESS;
+}
+
+WasiError fd_close(int fd) {
+    printf("[host] fd_close fd=%d\n", fd);
+    return SUCCESS;
+}
+
+WasiError fd_read(int fd, int buf_iovec_addr, int vec_len, int size_addr) {
+    printf("[host] fd_read fd=%d vec_len=%d size_addr=%d\n", fd, vec_len, size_addr);
+    return SUCCESS;
+}
+
 WasiError fd_write(int fd, int buf_iovec_addr, int vec_len, int size_addr) {
+    printf("[host] fd_write fd=%d vec_len=%d size_addr=%d\n", fd, vec_len, size_addr);
     char* iovec_ptr = (char *)(linear_memory_base + buf_iovec_addr);
     IoVec* iovec = (IoVec*)iovec_ptr;
 
@@ -46,16 +89,19 @@ WasiError fd_write(int fd, int buf_iovec_addr, int vec_len, int size_addr) {
 }
 
 WasiError environ_get(int env_addrs, int env_buf_addr){
+  printf("[host] environ_get\n");
   // TODO: implement
   return SUCCESS;
 }
 
 WasiError environ_sizes_get(int env_count_addr, int env_buf_size_addr){
+  printf("[host] environ_sizes_get\n");
   // TODO: implement
   return SUCCESS;
 }
 
 void proc_exit(int code){
+  printf("[host] proc_exit\n");
   exit(code);
 }
 
@@ -64,6 +110,7 @@ void proc_exit(int code){
 //////////////////////////////////////////////
 
 long memory_base(){
+  printf("[host] memory_base\n");
   // malloc 32 Block for linear memory
   char* memory = (char*)malloc(LINEAR_MEMORY_BLOCK_SIZE * LINEAR_MEMORY_BLOCK_NUM_MAX);
   linear_memory_base = (long)memory;
@@ -71,6 +118,7 @@ long memory_base(){
 }
 
 long memory_grow(long num){
+  printf("[host] memory_grow\n");
   int old = linear_memory_block_num;
 
   // check if there are enough memory
